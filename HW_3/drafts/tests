@@ -1,0 +1,83 @@
+
+def split_bits(num):
+
+    assert len(num) == 64
+
+    number_dict = {
+        "s" : num[:1],
+        "e" : num[1:12],
+        "e_10" : (int(num[1:12], 2) - 1023),
+        "f" : num[12:],
+        "f_10" : int(num[12:], 2)
+    }
+    return number_dict
+
+def float_add(a, b):
+    # splitting bits
+    a_dict = split_bits(a)
+    b_dict = split_bits(b)
+
+    # checking if a = -b or b = -a
+    if      (a_dict["e"] == b_dict["e"])\
+            and (a_dict["f"] == b_dict["f"])\
+            and (a_dict["s"] != b_dict["s"]):
+        return "0" * 64
+
+    final_res = {
+        "s": "0",
+        "e": "",
+        "e_10": "",
+        "f": "",
+        "f_10": 0
+    }
+
+    a_dict["f"] = "1" + a_dict["f"]
+    b_dict["f"] = "1" + b_dict["f"]
+
+    if a_dict["e_10"] > b_dict["e_10"]:
+        delta = a_dict["e_10"] - b_dict["e_10"]
+        b_dict["f"] = ("0" * delta) + b_dict["f"]
+        b_dict["f"] = b_dict["f"][:len(b_dict["f"]) - delta]
+        b_dict["f_10"] = int(b_dict["f"], 2)
+
+
+    elif a_dict["e_10"] < b_dict["e_10"]:
+        delta = b_dict["e_10"] - a_dict["e_10"]
+        b_dict["f"] = ("0" * delta) + a_dict["f"]
+        b_dict["f"] = a_dict["f"][:len(a_dict["f"]) - delta]
+        b_dict["f_10"] = int(a_dict["f"], 2)
+
+    # checking for symbol
+    if a_dict["s"] == "1":
+        a_dict["f_10"] = int(("-" + str(a_dict["f_10"])))
+
+    if b_dict["s"] == "1":
+        b_dict["f_10"] = int(("-" + str(b_dict["f_10"])))
+
+    final_res["f_10"] = a_dict["f_10"] + b_dict["f_10"]
+
+    if final_res["f_10"] < 0:
+        final_res["s"] = "1"
+
+    final_res["f"] = str(bin(abs(final_res["f_10"])))[2:]
+
+    if len(final_res["f"]) > 52:
+        final_res["f"] = final_res["f"][1:]
+        while len(final_res["f"]) > 52:
+            final_res["f"] -= final_res["f"][-1:-2:-1]
+
+    elif len(final_res["f"]) < 52:
+        final_res["f"] = "0" * (52 - len(final_res["f"])) + final_res["f"]
+
+    max_e = max(a_dict["e_10"], b_dict["e_10"])
+    max_e += 1023
+    max_e = str(bin(max_e))[2:]
+
+    if len(max_e) < 11:
+        max_e = ("0" * (11 - len(max_e))) + max_e
+
+    final_res["e"] = max_e
+
+    return final_res["s"] + final_res["e"] + final_res["f"]
+
+print(float_add(a1, b1))
